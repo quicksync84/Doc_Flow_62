@@ -229,30 +229,42 @@ figma.ui.onmessage = async msg => {
   if (msg.type === 'resolve-all-warnings') {
     try {
       console.log('Resolving all warnings');
+      // Store current warnings state with original visibility
+      const warningState = new Map();
       const resolvedWarnings = [];
       const errors = [];
 
-      // Get all instances on the current page
-      const instances = figma.currentPage.findAll(node => 
-        node.type === 'INSTANCE'
+      // Get all text nodes that are currently hidden
+      const hiddenTextNodes = figma.currentPage.findAll(node => 
+        node.type === 'TEXT' && !node.visible
       );
 
-      for (const instance of instances) {
-        // Find all hidden text nodes
-        const hiddenNodes = instance.findAll(node => 
-          node.type === 'TEXT' && !node.visible
-        );
+      // Filter and process only nodes that belong to instances
+      for (const node of hiddenTextNodes) {
+        const instance = node.parent;
+        if (!instance || instance.type !== 'INSTANCE') continue;
 
-        for (const node of hiddenNodes) {
-          try {
-            node.visible = true;
-            resolvedWarnings.push({
-              componentName: instance.name,
-              tag: node.name
-            });
-          } catch (error) {
-            errors.push(`Failed to resolve warning in "${instance.name}/${node.name}": ${error.message}`);
-          }
+        const key = `${instance.name}:${node.name}`;
+
+        // Store the current state
+        warningState.set(key, {
+          instance,
+          node,
+          wasVisible: node.visible
+        });
+
+        try {
+          // Set visibility based on undo flag
+          node.visible = !msg.undo;
+
+          resolvedWarnings.push({
+            componentName: instance.name,
+            tag: node.name,
+            key,
+            resolved: !msg.undo
+          });
+        } catch (error) {
+          errors.push(`Failed to resolve warning in "${instance.name}/${node.name}": ${error.message}`);
         }
       }
 
@@ -262,10 +274,19 @@ figma.ui.onmessage = async msg => {
         console.error('Errors during resolution:', errors);
       }
 
+      // Store the warning state for future reference
+      figma.clientStorage.setAsync('warningState', 
+        Array.from(warningState.entries())
+      ).catch(error => {
+        console.error('Failed to store warning state:', error);
+      });
+
       figma.ui.postMessage({
         type: 'all-warnings-resolved',
         warnings: resolvedWarnings,
-        errors
+        errors,
+        reverted: msg.undo || false,
+        stateKey: Date.now() // Unique key for this state
       });
 
     } catch (error) {
