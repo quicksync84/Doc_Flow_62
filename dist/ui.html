@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Simple Test UI</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      font-size: 16px;
+      margin: 0 0 16px 0;
+      color: var(--figma-color-text);
+    }
+    #status {
+      margin-top: 16px;
+      font-size: 14px;
+      color: var(--figma-color-text);
+    }
+  </style>
+  <script>
+    console.log('UI script starting...');
+    window.onload = () => {
+      console.log('Window loaded');
+      try {
+        parent.postMessage({ 
+          pluginMessage: { 
+            type: 'log', 
+            message: 'UI loaded successfully.' 
+          } 
+        }, '*');
+        console.log('Initial message sent to plugin');
+      } catch (error) {
+        console.error('Error sending initial message:', error);
+      }
+    };
+
+    window.onerror = (message, source, lineno, colno, error) => {
+      console.error('UI Error:', {
+        message,
+        source,
+        lineno,
+        colno,
+        error
+      });
+    };
+  </script>
+</head>
+<body>
+  <h1>Hello from the UI!</h1>
+  <div id="status"></div>
+<script defer src="ui.js"></script></body>
+</html>

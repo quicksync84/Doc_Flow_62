@@ -1,0 +1,6 @@
+{
+  "name": "doc-flow",
+  "version": "1.0.0",
+  "description": "A Figma plugin for document content flow",
+  "main": "code.js"
+}

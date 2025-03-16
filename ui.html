@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Doc Flow</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+  <style>
+    :root {
+      --font-stack: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-size-xsmall: 11px;
+      --font-size-small: 12px;
+      --font-size-large: 13px;
+      --border-radius-small: 2px;
+      --border-radius-med: 6px;
+      --spacing-xxsmall: 4px;
+      --spacing-xsmall: 8px;
+      --spacing-small: 12px;
+      --spacing-med: 16px;
+      --spacing-large: 20px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-stack);
+      font-size: var(--font-size-small);
+      color: var(--figma-color-text);
+      background-color: var(--figma-color-bg);
+      margin: 0;
+      padding: var(--spacing-large);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    body.figma-dark {
+      color-scheme: dark;
+    }
+
+    body.figma-light {
+      color-scheme: light;
+    }
+
+    h1 {
+      font-size: var(--font-size-large);
+      font-weight: 600;
+      margin: 0 0 var(--spacing-med) 0;
+      color: var(--figma-color-text);
+      flex-shrink: 0;
+    }
+
+    .section {
+      margin-bottom: var(--spacing-med);
+      flex-shrink: 0;
+    }
+
+    .component-list-container {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid var(--figma-color-border);
+      border-radius: var(--border-radius-small);
+      background: var(--figma-color-bg);
+      margin: var(--spacing-med) 0;
+    }
+
+    .component-list-header {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-small);
+      padding: var(--spacing-small);
+      background: var(--figma-color-bg);
+      border-bottom: 1px solid var(--figma-color-border);
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-large);
+    }
+
+    .toggle-group {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-xsmall);
+    }
+
+    .component-list {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: var(--spacing-small);
+    }
+
+    .component-item {
+      padding: var(--spacing-small);
+      border: 1px solid var(--figma-color-border);
+      border-radius: var(--border-radius-small);
+      margin-bottom: var(--spacing-small);
+      background: var(--figma-color-bg);
+    }
+
+    .component-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .label {
+      display: block;
+      margin-bottom: var(--spacing-xxsmall);
+      font-size: var(--font-size-xsmall);
+      font-weight: 500;
+      color: var(--figma-color-text);
+    }
+
+    .upload-area {
+      position: relative;
+      width: 100%;
+      min-height: 80px;
+      margin-bottom: var(--spacing-med);
+      background: var(--figma-color-bg);
+      border: 2px dashed var(--figma-color-border);
+      border-radius: var(--border-radius-small);
+      transition: all 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: var(--spacing-med);
+      cursor: pointer;
+    }
+
+    .upload-area.has-file {
+      min-height: 48px;
+      padding: var(--spacing-small);
+      flex-direction: row;
+      justify-content: flex-start;
+      gap: var(--spacing-small);
+    }
+
+    .upload-area.drag-over {
+      border-color: var(--figma-color-border-brand-strong);
+      background: var(--figma-color-bg-hover);
+    }
+
+    .upload-area:hover {
+      border-color: var(--figma-color-border-strong);
+      background: var(--figma-color-bg-hover);
+    }
+
+    .upload-icon {
+      width: 24px;
+      height: 24px;
+      color: var(--figma-color-text-secondary);
+      flex-shrink: 0;
+    }
+
+    .upload-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--spacing-xxsmall);
+    }
+
+    .upload-text {
+      font-size: var(--font-size-xsmall);
+      color: var(--figma-color-text);
+      text-align: center;
+    }
+
+    .upload-subtext {
+      font-size: var(--font-size-xsmall);
+      color: var(--figma-color-text-secondary);
+    }
+
+    .file-input {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .button {
+      width: 100%;
+      height: 32px;
+      background: var(--figma-color-bg-brand);
+      color: var(--figma-color-text-onbrand);
+      border: none;
+      border-radius: var(--border-radius-med);
+      padding: 0 var(--spacing-med);
+      font-size: var(--font-size-xsmall);
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.1s ease;
+      flex-shrink: 0;
+    }
+
+    .button:hover:not(:disabled) {
+      background: var(--figma-color-bg-brand-hover);
+    }
+
+    .button:disabled {
+      background: var(--figma-color-bg-disabled);
+      color: var(--figma-color-text-disabled);
+      cursor: not-allowed;
+    }
+
+    .status {
+      margin-top: var(--spacing-med);
+      padding: var(--spacing-xsmall) var(--spacing-small);
+      border-radius: var(--border-radius-small);
+      font-size: var(--font-size-xsmall);
+      flex-shrink: 0;
+    }
+
+    .status-success {
+      background: var(--figma-color-bg-success);
+      color: var(--figma-color-text-success);
+      border: 1px solid var(--figma-color-border-success);
+    }
+
+    .status-error {
+      background: var(--figma-color-bg-danger);
+      color: var(--figma-color-text-danger);
+      border: 1px solid var(--figma-color-border-danger);
+    }
+
+    .status-info {
+      background: var(--figma-color-bg-secondary);
+      color: var(--figma-color-text);
+      border: 1px solid var(--figma-color-border);
+    }
+
+    .component-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--spacing-xxsmall);
+    }
+
+    .component-name {
+      font-weight: 500;
+      color: var(--figma-color-text);
+    }
+
+    .component-checkbox {
+      margin-right: var(--spacing-small);
+    }
+
+    .component-tags {
+      font-size: var(--font-size-xsmall);
+      color: var(--figma-color-text-secondary);
+      margin-bottom: var(--spacing-xxsmall);
+    }
+
+    .component-messages {
+      margin-top: var(--spacing-xsmall);
+    }
+
+    .component-warning {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--spacing-xsmall);
+      color: var(--figma-color-text-warning);
+      font-size: var(--font-size-xsmall);
+      margin-top: var(--spacing-xxsmall);
+    }
+
+    .component-error {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--spacing-xsmall);
+      color: var(--figma-color-text-danger);
+      font-size: var(--font-size-xsmall);
+      margin-top: var(--spacing-xxsmall);
+    }
+
+    .warning-icon, .error-icon {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .warning-icon {
+      color: var(--figma-color-icon-warning);
+    }
+
+    .error-icon {
+      color: var(--figma-color-icon-danger);
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 40px;
+      height: 20px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: var(--figma-color-bg-disabled);
+      transition: .2s;
+      border-radius: 20px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 16px;
+      width: 16px;
+      left: 2px;
+      bottom: 2px;
+      background-color: white;
+      transition: .2s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: var(--figma-color-bg-brand);
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(20px);
+    }
+
+    .select-all-label {
+      font-size: var(--font-size-xsmall);
+      color: var(--figma-color-text);
+      margin-left: var(--spacing-xsmall);
+    }
+
+    .warning-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--spacing-small);
+      margin-top: var(--spacing-xxsmall);
+    }
+
+    .warning-message {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-xsmall);
+      color: var(--figma-color-text-warning);
+      font-size: var(--font-size-xsmall);
+    }
+
+    .warning-icon {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+      color: var(--figma-color-icon-warning);
+    }
+
+    .resolve-switch {
+      position: relative;
+      display: inline-block;
+      width: 40px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+
+    .resolve-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .resolve-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: var(--figma-color-bg-disabled);
+      transition: .2s;
+      border-radius: 20px;
+    }
+
+    .resolve-slider:before {
+      position: absolute;
+      content: "";
+      height: 16px;
+      width: 16px;
+      left: 2px;
+      bottom: 2px;
+      background-color: white;
+      transition: .2s;
+      border-radius: 50%;
+    }
+
+    input:checked + .resolve-slider {
+      background-color: var(--figma-color-bg-brand);
+    }
+
+    input:checked + .resolve-slider:before {
+      transform: translateX(20px);
+    }
+  </style>
+  <script>
+    let fileContent = '';
+    let currentFileName = '';
+    let selectedComponents = [];
+    let isProcessing = false;
+
+    function updateTheme() {
+      const isDark = document.documentElement.classList.contains('figma-dark');
+      document.body.classList.remove('figma-light', 'figma-dark');
+      document.body.classList.add(isDark ? 'figma-dark' : 'figma-light');
+    }
+
+    function showStatus(message, type = 'info') {
+      console.log('Showing status:', { message, type });
+      const status = document.getElementById('status');
+      if (!status) return;
+      
+      status.textContent = message;
+      status.className = `status status-${type}`;
+    }
+
+    function updateButton() {
+      console.log('Updating button state');
+      const button = document.getElementById('processButton');
+      if (!button) return;
+      
+      const hasContent = fileContent && selectedComponents.length > 0 && !isProcessing;
+      button.disabled = !hasContent;
+      
+      console.log('Button state updated:', { 
+        hasContent, 
+        selectedCount: selectedComponents.length,
+        isProcessing 
+      });
+    }
+
+    function updateUploadArea() {
+      console.log('Updating upload area');
+      const uploadArea = document.getElementById('uploadArea');
+      const uploadContent = document.getElementById('uploadContent');
+      
+      if (!uploadArea || !uploadContent) return;
+
+      if (currentFileName) {
+        uploadArea.classList.add('has-file');
+        uploadContent.innerHTML = `
+          <div class="upload-text">${currentFileName}</div>
+          <div class="upload-subtext">Click to change file</div>
+        `;
+      } else {
+        uploadArea.classList.remove('has-file');
+        uploadContent.innerHTML = `
+          <div class="upload-text">Drop your file here or click to browse</div>
+          <div class="upload-subtext">Accepts .txt and .docx files</div>
+        `;
+      }
+    }
+
+    function updateComponentList(components) {
+      console.log('Updating component list:', components);
+      const componentList = document.getElementById('componentList');
+      if (!componentList) return;
+
+      if (!components || components.length === 0) {
+        componentList.innerHTML = '';
+        return;
+      }
+
+      // Get total warning count
+      const totalWarnings = components.reduce((count, component) => 
+        count + (component.warnings?.length || 0), 0
+      );
+
+      // Update resolve all toggle state
+      const resolveAllToggle = document.getElementById('resolveAll');
+      if (resolveAllToggle) {
+        resolveAllToggle.checked = false;
+        resolveAllToggle.disabled = totalWarnings === 0;
+      }
+
+      // Reset selected components
+      selectedComponents = components
+        .filter(component => component.errors.length === 0)
+        .map(component => component.name);
+
+      const listHtml = components.map(component => {
+        const hasErrors = component.errors.length > 0;
+        const hasWarnings = component.warnings.length > 0;
+        const isSelected = selectedComponents.includes(component.name);
+
+        return `
+          <div class="component-item" data-component="${component.name}">
+            <div class="component-header">
+              <label style="display: flex; align-items: center;">
+                <input 
+                  type="checkbox" 
+                  class="component-checkbox" 
+                  value="${component.name}"
+                  ${hasErrors ? 'disabled' : ''}
+                  ${isSelected ? 'checked' : ''}
+                >
+                <div class="component-name">${component.name}</div>
+              </label>
+            </div>
+            <div class="component-tags">
+              Tags: ${component.tags.join(', ')}
+            </div>
+            <div class="component-messages">
+              ${component.errors.map(error => `
+                <div class="component-error">
+                  <svg class="error-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                    <path d="M12 8v4m0 4h.01" stroke-width="2" stroke-linecap="round"/>
+                  </svg>
+                  ${error}
+                </div>
+              `).join('')}
+              ${component.warnings.map(warning => `
+                <div class="warning-toggle">
+                  <div class="warning-message">
+                    <svg class="warning-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path d="M12 2L2 22h20L12 2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M12 9v4m0 4h.01" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                    Hidden Layer: ${warning.tag}
+                  </div>
+                  <label class="resolve-switch">
+                    <input 
+                      type="checkbox" 
+                      class="resolve-toggle" 
+                      data-component="${component.name}" 
+                      data-tag="${warning.tag}"
+                      ${warning.resolved ? 'checked' : ''}
+                    >
+                    <span class="resolve-slider"></span>
+                  </label>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      componentList.innerHTML = listHtml;
+
+      // Add event listeners for resolve toggles
+      const resolveToggles = document.querySelectorAll('.resolve-toggle');
+      resolveToggles.forEach(toggle => {
+        toggle.addEventListener('change', (e) => {
+          const componentName = e.target.dataset.component;
+          const tag = e.target.dataset.tag;
+          const undo = !e.target.checked;
+          
+          console.log('Toggle changed:', { componentName, tag, undo });
+          
+          parent.postMessage({
+            pluginMessage: {
+              type: 'resolve-warning',
+              componentName,
+              tag,
+              undo
+            }
+          }, '*');
+        });
+      });
+
+      // Add event listeners
+      const selectAllCheckbox = document.getElementById('selectAll');
+      const componentCheckboxes = document.querySelectorAll('.component-checkbox');
+
+      if (selectAllCheckbox) {
+        selectAllCheckbox.checked = Array.from(componentCheckboxes)
+          .filter(cb => !cb.disabled)
+          .every(cb => cb.checked);
+
+        selectAllCheckbox.addEventListener('change', (e) => {
+          const checked = e.target.checked;
+          componentCheckboxes.forEach(checkbox => {
+            if (!checkbox.disabled) {
+              checkbox.checked = checked;
+              const componentName = checkbox.value;
+              if (checked) {
+                if (!selectedComponents.includes(componentName)) {
+                  selectedComponents.push(componentName);
+                }
+              } else {
+                selectedComponents = selectedComponents.filter(name => name !== componentName);
+              }
+            }
+          });
+          updateButton();
+        });
+      }
+
+      componentCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', (e) => {
+          const componentName = e.target.value;
+          if (e.target.checked) {
+            if (!selectedComponents.includes(componentName)) {
+              selectedComponents.push(componentName);
+            }
+          } else {
+            selectedComponents = selectedComponents.filter(name => name !== componentName);
+          }
+
+          // Update select all checkbox
+          if (selectAllCheckbox) {
+            selectAllCheckbox.checked = Array.from(componentCheckboxes)
+              .filter(cb => !cb.disabled)
+              .every(cb => cb.checked);
+          }
+
+          updateButton();
+        });
+      });
+
+      console.log('Component list updated, selected components:', selectedComponents);
+      updateButton();
+    }
+
+    async function processWordDocument(file) {
+      console.log('Processing Word document:', file.name);
+      
+      try {
+        isProcessing = true;
+        updateButton();
+        showStatus('Converting Word document...', 'info');
+
+        const arrayBuffer = await file.arrayBuffer();
+        console.log('File loaded as ArrayBuffer');
+
+        const result = await mammoth.extractRawText({ arrayBuffer });
+        console.log('Mammoth extraction complete');
+
+        if (!result || !result.value) {
+          throw new Error('Failed to extract text from Word document');
+        }
+
+        const content = result.value.trim();
+        console.log('Extracted content length:', content.length);
+
+        if (!content) {
+          throw new Error('The Word document is empty');
+        }
+
+        return content;
+      } catch (error) {
+        console.error('Word document processing error:', error);
+        throw new Error(`Failed to process Word document: ${error.message}`);
+      } finally {
+        isProcessing = false;
+        updateButton();
+      }
+    }
+
+    async function processTextFile(file) {
+      console.log('Processing text file:', file.name);
+      
+      try {
+        isProcessing = true;
+        updateButton();
+        showStatus('Reading file...', 'info');
+
+        const content = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          
+          reader.onload = () => {
+            console.log('FileReader load complete');
+            resolve(reader.result);
+          };
+          
+          reader.onerror = () => {
+            console.error('FileReader error:', reader.error);
+            reject(new Error('Failed to read file'));
+          };
+          
+          reader.readAsText(file);
+        });
+
+        console.log('Text file content length:', content.length);
+
+        if (!content.trim()) {
+          throw new Error('The text file is empty');
+        }
+
+        return content.trim();
+      } catch (error) {
+        console.error('Text file processing error:', error);
+        throw new Error(`Failed to process text file: ${error.message}`);
+      } finally {
+        isProcessing = false;
+        updateButton();
+      }
+    }
+
+    async function handleFile(file) {
+      console.log('Handling file:', file?.name);
+      
+      try {
+        if (!file) {
+          throw new Error('No file selected');
+        }
+
+        if (isProcessing) {
+          console.log('File processing already in progress, ignoring');
+          return;
+        }
+
+        const fileName = file.name.toLowerCase();
+        let content;
+
+        if (fileName.endsWith('.docx')) {
+          content = await processWordDocument(file);
+        } else if (fileName.endsWith('.txt')) {
+          content = await processTextFile(file);
+        } else {
+          throw new Error('Please select a .txt or .docx file');
+        }
+
+        fileContent = content;
+        currentFileName = file.name;
+        updateUploadArea();
+        showStatus('File loaded successfully', 'success');
+
+        console.log('Sending content for analysis');
+        parent.postMessage({
+          pluginMessage: {
+            type: 'analyze-content',
+            content
+          }
+        }, '*');
+
+      } catch (error) {
+        console.error('File handling error:', error);
+        fileContent = '';
+        currentFileName = '';
+        updateUploadArea();
+        showStatus(error.message, 'error');
+      }
+
+      updateButton();
+    }
+
+    function handleResolveAll(e) {
+      console.log('Resolve all toggle changed:', e.target.checked);
+      
+      if (e.target.checked) {
+        parent.postMessage({
+          pluginMessage: {
+            type: 'resolve-all-warnings'
+          }
+        }, '*');
+      }
+    }
+
+    window.onload = () => {
+      console.log('Window loaded');
+      updateTheme();
+
+      const uploadArea = document.getElementById('uploadArea');
+      const fileInput = document.getElementById('fileInput');
+      const processButton = document.getElementById('processButton');
+
+      if (uploadArea && fileInput) {
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+          uploadArea.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }, { passive: false });
+
+          document.body.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }, { passive: false });
+        });
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+          uploadArea.addEventListener(eventName, () => {
+            if (!isProcessing) {
+              uploadArea.classList.add('drag-over');
+            }
+          });
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+          uploadArea.addEventListener(eventName, () => {
+            uploadArea.classList.remove('drag-over');
+          });
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+          if (!isProcessing) {
+            handleFile(e.dataTransfer.files[0]);
+          }
+        });
+
+        uploadArea.addEventListener('click', () => {
+          if (!isProcessing) {
+            fileInput.click();
+          }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+          handleFile(e.target.files[0]);
+        });
+      }
+
+      if (processButton) {
+        processButton.addEventListener('click', () => {
+          if (!fileContent) {
+            showStatus('Please upload a file first', 'error');
+            return;
+          }
+
+          if (!selectedComponents || selectedComponents.length === 0) {
+            showStatus('Please select at least one component', 'error');
+            return;
+          }
+
+          try {
+            isProcessing = true;
+            updateButton();
+            
+            parent.postMessage({
+              pluginMessage: {
+                type: 'process-content',
+                content: fileContent,
+                selectedComponents
+              }
+            }, '*');
+
+            showStatus('Processing...', 'info');
+          } catch (error) {
+            console.error('Error sending message:', error);
+            showStatus('Error sending data to plugin', 'error');
+            isProcessing = false;
+            updateButton();
+          }
+        });
+      }
+
+      window.onmessage = (event) => {
+        console.log('Received message:', event.data?.pluginMessage);
+        if (!event.data?.pluginMessage) return;
+        
+        const message = event.data.pluginMessage;
+        
+        if (message.type === 'analysis-complete') {
+          console.log('Analysis complete:', message.components);
+          updateComponentList(message.components);
+          showStatus('Analysis complete', 'success');
+        } else if (message.type === 'process-complete') {
+          showStatus('Content processed successfully!', 'success');
+          isProcessing = false;
+          updateButton();
+        } else if (message.type === 'error') {
+          console.error('Error:', message.error);
+          showStatus(message.error || 'An error occurred', 'error');
+          isProcessing = false;
+          updateButton();
+        } else if (message.type === 'warning-resolved') {
+          console.log('Warning resolution updated:', message);
+          const toggle = document.querySelector(`.resolve-toggle[data-component="${message.componentName}"][data-tag="${message.tag}"]`);
+          if (toggle) {
+            toggle.checked = message.resolved;
+          }
+        } else if (message.type === 'all-warnings-resolved') {
+          console.log('All warnings resolved:', message);
+          
+          // Hide all warning toggles
+          const warningToggles = document.querySelectorAll('.warning-toggle');
+          warningToggles.forEach(toggle => {
+            toggle.style.display = 'none';
+          });
+
+          if (message.errors?.length > 0) {
+            showStatus(`Some warnings could not be resolved: ${message.errors.join(', ')}`, 'error');
+          } else {
+            showStatus('All warnings resolved successfully', 'success');
+          }
+        }
+      };
+
+      const observer = new MutationObserver(() => {
+        updateTheme();
+      });
+
+      observer.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['class']
+      });
+    };
+  </script>
+</head>
+<body>
+  <h1>Doc Flow</h1>
+  
+  <div class="section">
+    <label class="label">Upload document</label>
+    <div id="uploadArea" class="upload-area">
+      <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" 
+          stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div id="uploadContent" class="upload-content">
+        <div class="upload-text">Drop your file here or click to browse</div>
+        <div class="upload-subtext">Accepts .txt and .docx files</div>
+      </div>
+      <input 
+        type="file" 
+        id="fileInput" 
+        class="file-input"
+        accept=".txt,.docx"
+      >
+    </div>
+  </div>
+
+  <div class="component-list-container">
+    <div class="component-list-header">
+      <div class="header-controls">
+        <div class="toggle-group">
+          <label class="switch">
+            <input type="checkbox" id="selectAll">
+            <span class="slider"></span>
+          </label>
+          <span class="select-all-label">Select All</span>
+        </div>
+        <div class="toggle-group">
+          <label class="switch">
+            <input type="checkbox" id="resolveAll" onchange="handleResolveAll(event)">
+            <span class="slider"></span>
+          </label>
+          <span class="select-all-label">Resolve All</span>
+        </div>
+      </div>
+    </div>
+    <div class="component-list" id="componentList"></div>
+  </div>
+
+  <button id="processButton" class="button" disabled>Process Content</button>
+  
+  <div id="status"></div>
+</body>
+</html>
