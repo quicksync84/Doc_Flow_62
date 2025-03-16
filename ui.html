@@ -722,6 +722,12 @@
     async function handleFile(file) {
       console.log('Handling file:', file?.name);
       
+      // Reset file input to ensure change event fires even if same file is selected
+      const fileInput = document.getElementById('fileInput');
+      if (fileInput) {
+        fileInput.value = '';
+      }
+
       try {
         if (!file) {
           throw new Error('No file selected');
@@ -731,6 +737,10 @@
           console.log('File processing already in progress, ignoring');
           return;
         }
+
+        // Set processing state immediately to prevent multiple uploads
+        isProcessing = true;
+        updateButton();
 
         const fileName = file.name.toLowerCase();
         let content;
@@ -760,6 +770,7 @@
         console.error('File handling error:', error);
         fileContent = '';
         currentFileName = '';
+        isProcessing = false;
         updateUploadArea();
         showStatus(error.message, 'error');
       }
@@ -821,12 +832,21 @@
         });
 
         uploadArea.addEventListener('click', () => {
-          if (!isProcessing) {
-            fileInput.click();
+          // Prevent click event if already processing or if event originated from file input
+          if (isProcessing || event.target === fileInput) {
+            return;
           }
+          
+          // Use requestAnimationFrame to avoid potential race conditions
+          requestAnimationFrame(() => {
+            fileInput.click();
+          });
         });
 
         fileInput.addEventListener('change', (e) => {
+          // Prevent event from bubbling up to uploadArea
+          e.stopPropagation();
+          
           handleFile(e.target.files[0]);
         });
       }
