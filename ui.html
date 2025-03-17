@@ -369,6 +369,11 @@
       gap: var(--spacing-xsmall);
       color: var(--figma-color-text-warning);
       font-size: var(--font-size-xsmall);
+      transition: color 0.2s ease;
+    }
+
+    .warning-message.warnings-resolved {
+      color: var(--figma-color-text-secondary);
     }
 
     .warning-icon {
@@ -912,11 +917,17 @@
         } else if (message.type === 'all-warnings-resolved') {
           console.log('All warnings resolved:', message);
           
-          // Hide all warning toggles
-          const warningToggles = document.querySelectorAll('.warning-toggle');
-          warningToggles.forEach(toggle => {
-            toggle.style.display = 'none';
+          const warningMessages = document.querySelectorAll('.warning-message');
+          console.log('Found warning messages:', warningMessages.length);
+          
+          warningMessages.forEach(message => {
+            if (message.resolve) {
+              message.classList.add('warnings-resolved');
+            } else {
+              message.classList.remove('warnings-resolved');
+            }
           });
+          console.log('Warning message styles updated');
 
           if (message.errors?.length > 0) {
             showStatus(`Some warnings could not be resolved: ${message.errors.join(', ')}`, 'error');
