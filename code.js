@@ -381,9 +381,9 @@ figma.ui.onmessage = async msg => {
                         beforeVisible: node.visible
                     });
 
-                    node.visible = true;
+                    node.visible = msg.resolve;
                     console.log('Node visibility updated in resolve-all-warnings:', { nodeName: node.name, visible: node.visible });
-                    warning.resolved = true;
+                    warning.resolved = msg.resolve;
                     currentWarnings.set(key, warning);
 
                     console.log('Node visibility updated:', {

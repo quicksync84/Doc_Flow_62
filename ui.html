@@ -781,13 +781,12 @@
     function handleResolveAll(e) {
       console.log('Resolve all toggle changed:', e.target.checked);
       
-      if (e.target.checked) {
-        parent.postMessage({
-          pluginMessage: {
-            type: 'resolve-all-warnings'
-          }
-        }, '*');
-      }
+      parent.postMessage({
+        pluginMessage: {
+          type: 'resolve-all-warnings',
+          resolve: e.target.checked
+        }
+      }, '*');
     }
 
     window.onload = () => {
