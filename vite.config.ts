@@ -5,6 +5,7 @@ import { resolve } from 'path';
 export default defineConfig({
   plugins: [react()],
   build: {
+    sourcemap: true,
     outDir: 'dist',
     lib: {
       entry: resolve(__dirname, 'ui/src/main.tsx'),
@@ -16,7 +17,8 @@ export default defineConfig({
       output: {
         entryFileNames: 'bundle.js',
         extend: true,
-        dir: 'dist'
+        dir: 'dist',
+        sourcemap: true
       }
     }
   }
