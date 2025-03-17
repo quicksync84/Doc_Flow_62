@@ -1,5 +1,18 @@
 console.log('Plugin starting...');
 
+// Load bundle from dist directory with increased delay and document check
+setTimeout(() => {
+  if (document && document.head) {
+    console.log('Document ready, adding bundle script');
+    const bundleScript = document.createElement('script');
+    bundleScript.src = 'dist/bundle.js';
+    document.head.appendChild(bundleScript);
+    console.log('Bundle script added to document');
+  } else {
+    console.error('Document not ready for script injection');
+  }
+}, 300);
+
 figma.showUI(__html__, {
   width: 450,
   height: 600,
@@ -115,6 +128,10 @@ figma.ui.onmessage = async msg => {
         throw new Error('No content provided');
       }
 
+      // Reset warnings state for new analysis
+      currentWarnings = new Map();
+      console.log('Warnings state reset for new analysis');
+
       const components = parseContent(msg.content);
       const analysis = [];
 
@@ -146,6 +163,16 @@ figma.ui.onmessage = async msg => {
           if (hiddenNodes.length > 0) {
             console.log('Found hidden text nodes with content:', hiddenNodes);
             hiddenNodes.forEach(node => {
+              // Store warning with original visibility state
+              const key = `${component.number}:${node.name}`;
+              currentWarnings.set(key, {
+                instance,
+                node,
+                originalState: node.visible,
+                resolved: false
+              });
+              console.log('Stored warning state:', key, { visible: node.visible });
+
               result.warnings.push({
                 type: 'hidden',
                 tag: node.name,
@@ -229,64 +256,55 @@ figma.ui.onmessage = async msg => {
   if (msg.type === 'resolve-all-warnings') {
     try {
       console.log('Resolving all warnings');
-      // Store current warnings state with original visibility
-      const warningState = new Map();
+      const undo = msg.undo || false;
       const resolvedWarnings = [];
       const errors = [];
 
-      // Get all text nodes that are currently hidden
-      const hiddenTextNodes = figma.currentPage.findAll(node => 
-        node.type === 'TEXT' && !node.visible
-      );
+      console.log('Processing warnings:', {
+        totalWarnings: currentWarnings.size,
+        undo
+      });
 
-      // Filter and process only nodes that belong to instances
-      for (const node of hiddenTextNodes) {
-        const instance = node.parent;
-        if (!instance || instance.type !== 'INSTANCE') continue;
-
-        const key = `${instance.name}:${node.name}`;
-
-        // Store the current state
-        warningState.set(key, {
-          instance,
-          node,
-          wasVisible: node.visible
-        });
+      for (const [key, warning] of currentWarnings.entries()) {
+        const { instance, node, originalState } = warning;
 
         try {
-          // Set visibility based on undo flag
-          node.visible = !msg.undo;
+          // Set visibility based on undo flag and original state
+          const newVisibility = undo ? originalState : true;
+          node.visible = newVisibility;
+          warning.resolved = !undo;
+
+          console.log('Updated warning visibility:', {
+            key,
+            originalState,
+            newVisibility,
+            resolved: warning.resolved
+          });
 
           resolvedWarnings.push({
             componentName: instance.name,
             tag: node.name,
-            key,
-            resolved: !msg.undo
+            resolved: warning.resolved
           });
         } catch (error) {
           errors.push(`Failed to resolve warning in "${instance.name}/${node.name}": ${error.message}`);
         }
       }
 
-      console.log('Resolved warnings:', resolvedWarnings);
+      console.log('Warning resolution complete:', {
+        resolved: resolvedWarnings.length,
+        errors: errors.length
+      });
       
       if (errors.length > 0) {
         console.error('Errors during resolution:', errors);
       }
 
-      // Store the warning state for future reference
-      figma.clientStorage.setAsync('warningState', 
-        Array.from(warningState.entries())
-      ).catch(error => {
-        console.error('Failed to store warning state:', error);
-      });
-
       figma.ui.postMessage({
         type: 'all-warnings-resolved',
         warnings: resolvedWarnings,
         errors,
-        reverted: msg.undo || false,
-        stateKey: Date.now() // Unique key for this state
+        reverted: undo
       });
 
     } catch (error) {
@@ -384,3 +402,5 @@ figma.ui.postMessage({
 });
 
 console.log('Plugin initialized');
+
+// Initialize warnings state

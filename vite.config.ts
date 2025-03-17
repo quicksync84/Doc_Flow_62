@@ -5,7 +5,7 @@ import { resolve } from 'path';
 export default defineConfig({
   plugins: [react()],
   build: {
-    outDir: '.',
+    outDir: 'dist',
     lib: {
       entry: resolve(__dirname, 'ui/src/main.tsx'),
       name: 'ui',
@@ -15,7 +15,8 @@ export default defineConfig({
     rollupOptions: {
       output: {
         entryFileNames: 'bundle.js',
-        extend: true
+        extend: true,
+        dir: 'dist'
       }
     }
   }
