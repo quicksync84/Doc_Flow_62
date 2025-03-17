@@ -368,12 +368,14 @@
       align-items: center;
       gap: var(--spacing-xsmall);
       color: var(--figma-color-text-warning);
+      font-style: italic;
       font-size: var(--font-size-xsmall);
       transition: color 0.2s ease;
     }
 
     .warning-message.warnings-resolved {
       color: var(--figma-color-text-secondary);
+      font-style: normal;
     }
 
     .warning-icon {
@@ -548,7 +550,7 @@
               `).join('')}
               ${component.warnings.map(warning => `
                 <div class="warning-toggle">
-                  <div class="warning-message">
+                  <div class="warning-message" data-component="${component.name}" data-tag="${warning.tag}">
                     <svg class="warning-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                       <path d="M12 2L2 22h20L12 2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                       <path d="M12 9v4m0 4h.01" stroke-width="2" stroke-linecap="round"/>
@@ -583,6 +585,19 @@
           const undo = !e.target.checked;
           
           console.log('Toggle changed:', { componentName, tag, undo });
+          
+          // Update warning message style immediately
+          const warningMessage = document.querySelector(
+            `.warning-message[data-component="${componentName}"][data-tag="${tag}"]`
+          );
+          
+          if (warningMessage) {
+            if (e.target.checked) {
+              warningMessage.classList.add('warnings-resolved');
+            } else {
+              warningMessage.classList.remove('warnings-resolved');
+            }
+          }
           
           parent.postMessage({
             pluginMessage: {
@@ -917,16 +932,25 @@
         } else if (message.type === 'all-warnings-resolved') {
           console.log('All warnings resolved:', message);
           
-          const warningMessages = document.querySelectorAll('.warning-message');
-          console.log('Found warning messages:', warningMessages.length);
+          // Update all toggles and warning messages based on resolve state
+          const resolveAllToggle = document.getElementById('resolveAll');
+          if (resolveAllToggle) {
+            resolveAllToggle.checked = message.resolve;
+          }
           
-          warningMessages.forEach(message => {
-            if (message.resolve) {
-              message.classList.add('warnings-resolved');
-            } else {
-              message.classList.remove('warnings-resolved');
+          // Update all individual toggles and warning messages
+          document.querySelectorAll('.resolve-toggle').forEach(toggle => {
+            toggle.checked = message.resolve;
+            const componentName = toggle.dataset.component;
+            const tag = toggle.dataset.tag;
+            const warningMessage = document.querySelector(
+              `.warning-message[data-component="${componentName}"][data-tag="${tag}"]`
+            );
+            if (warningMessage) {
+              warningMessage.classList.toggle('warnings-resolved', message.resolve);
             }
           });
+          
           console.log('Warning message styles updated');
 
           if (message.errors?.length > 0) {

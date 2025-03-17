@@ -350,17 +350,16 @@ figma.ui.onmessage = async msg => {
 
             console.log('Current warnings map size before loop:', currentWarnings.size);
 
-            // Log initial state of warnings
-            for (const [key, warning] of currentWarnings) {
-                console.log('Processing warning in first loop:', key);
-                console.log('Warning state before processing:', {
-                    key,
-                    nodeVisible: warning.node ? warning.node.visible : undefined,
+            // Convert warnings map to array for UI
+            const allWarnings = Array.from(currentWarnings.entries()).map(([key, warning]) => {
+                const [componentName, tag] = key.split(':');
+                return {
+                    componentName,
+                    tag,
                     resolved: warning.resolved,
-                    hasInstance: !!warning.instance,
-                    hasNode: !!warning.node
-                });
-            }
+                    visible: warning.node.visible
+                };
+            });
 
             for (const [key, warning] of currentWarnings) {
                 console.log('Processing warning in second loop:', key);
@@ -430,7 +429,8 @@ figma.ui.onmessage = async msg => {
 
             figma.ui.postMessage({
                 type: 'all-warnings-resolved',
-                warnings: resolvedWarnings,
+                allWarnings,
+                resolve: msg.resolve,
                 errors
             });
 
