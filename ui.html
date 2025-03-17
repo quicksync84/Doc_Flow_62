@@ -75,7 +75,7 @@
     .component-list-header {
       display: flex;
       align-items: center;
-      gap: var(--spacing-small);
+      justify-content: space-between;
       padding: var(--spacing-small);
       background: var(--figma-color-bg);
       border-bottom: 1px solid var(--figma-color-border);
@@ -87,7 +87,38 @@
     .header-controls {
       display: flex;
       align-items: center;
-      gap: var(--spacing-large);
+      gap: var(--spacing-small);
+    }
+
+    .refresh-button {
+      height: 24px;
+      padding: 0 var(--spacing-small);
+      background: var(--figma-color-bg-secondary);
+      color: var(--figma-color-text);
+      border: 1px solid var(--figma-color-border);
+      border-radius: var(--border-radius-small);
+      font-size: var(--font-size-xsmall);
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.1s ease;
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-xxsmall);
+    }
+
+    .refresh-button:hover:not(:disabled) {
+      background: var(--figma-color-bg-hover);
+      border-color: var(--figma-color-border-strong);
+    }
+
+    .refresh-button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .refresh-button svg {
+      width: 14px;
+      height: 14px;
     }
 
     .toggle-group {
@@ -824,6 +855,25 @@
     window.onload = () => {
       console.log('Window loaded');
       updateTheme();
+      
+      const refreshButton = document.getElementById('refreshButton');
+      if (refreshButton) {
+        refreshButton.addEventListener('click', () => {
+          if (isProcessing) return;
+          
+          console.log('Refresh button clicked');
+          isProcessing = true;
+          refreshButton.disabled = true;
+          showStatus('Refreshing warnings...', 'info');
+          
+          parent.postMessage({
+            pluginMessage: {
+              type: 'analyze-content',
+              content: fileContent
+            }
+          }, '*');
+        });
+      }
 
       const uploadArea = document.getElementById('uploadArea');
       const fileInput = document.getElementById('fileInput');
@@ -925,6 +975,12 @@
         if (message.type === 'analysis-complete') {
           console.log('Analysis complete:', message.components);
           updateComponentList(message.components);
+          isProcessing = false;
+          const refreshButton = document.getElementById('refreshButton');
+          if (refreshButton) {
+            refreshButton.disabled = false;
+          }
+          updateButton();
           showStatus('Analysis complete', 'success');
         } else if (message.type === 'process-complete') {
           showStatus('Content processed successfully!', 'success');
@@ -1019,6 +1075,15 @@
   <div class="component-list-container">
     <div class="component-list-header">
       <div class="header-controls">
+        <div class="toggle-group">
+          <button id="refreshButton" class="refresh-button" title="Refresh warnings">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c-2.5 0-4.8-.8-6.7-2.1M3 12a9 9 0 019-9m-9 9c0-2.5.8-4.8 2.1-6.7" 
+                stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            Refresh
+          </button>
+        </div>
         <div class="toggle-group">
           <label class="switch">
             <input type="checkbox" id="selectAll">
