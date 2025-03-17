@@ -370,12 +370,16 @@
       color: var(--figma-color-text-warning);
       font-style: italic;
       font-size: var(--font-size-xsmall);
-      transition: color 0.2s ease;
+      transition: all 0.2s ease;
     }
 
     .warning-message.warnings-resolved {
       color: var(--figma-color-text-secondary);
       font-style: normal;
+    }
+    
+    .warning-text {
+      transition: all 0.2s ease;
     }
 
     .warning-icon {
@@ -555,7 +559,7 @@
                       <path d="M12 2L2 22h20L12 2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                       <path d="M12 9v4m0 4h.01" stroke-width="2" stroke-linecap="round"/>
                     </svg>
-                    Hidden Layer: ${warning.tag}
+                    <span class="warning-text" data-original-text="Hidden Layer: ${warning.tag}">Hidden Layer: ${warning.tag}</span>
                   </div>
                   <label class="resolve-switch">
                     <input 
@@ -594,8 +598,16 @@
           if (warningMessage) {
             if (e.target.checked) {
               warningMessage.classList.add('warnings-resolved');
+              const textSpan = warningMessage.querySelector('.warning-text');
+              if (textSpan) {
+                textSpan.textContent = `Revealed Layer: ${tag}`;
+              }
             } else {
               warningMessage.classList.remove('warnings-resolved');
+              const textSpan = warningMessage.querySelector('.warning-text');
+              if (textSpan) {
+                textSpan.textContent = textSpan.dataset.originalText;
+              }
             }
           }
           
@@ -946,8 +958,17 @@
             const warningMessage = document.querySelector(
               `.warning-message[data-component="${componentName}"][data-tag="${tag}"]`
             );
+            
             if (warningMessage) {
               warningMessage.classList.toggle('warnings-resolved', message.resolve);
+              const textSpan = warningMessage.querySelector('.warning-text');
+              if (textSpan) {
+                if (message.resolve) {
+                  textSpan.textContent = `Revealed Layer: ${tag}`;
+                } else {
+                  textSpan.textContent = textSpan.dataset.originalText;
+                }
+              }
             }
           });
           
