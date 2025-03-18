@@ -74,7 +74,7 @@
 
     .component-list-header {
       display: flex;
-      align-items: center;
+      flex-direction: column;
       gap: var(--spacing-small);
       padding: var(--spacing-small);
       background: var(--figma-color-bg);
@@ -87,7 +87,40 @@
     .header-controls {
       display: flex;
       align-items: center;
-      gap: var(--spacing-large);
+      justify-content: flex-start;
+      gap: var(--spacing-small);
+    }
+
+    .refresh-button {
+      width: fit-content;
+      height: 28px;
+      padding: 0 var(--spacing-small);
+      background: var(--figma-color-bg-secondary);
+      color: var(--figma-color-text);
+      border: 1px solid var(--figma-color-border);
+      border-radius: var(--border-radius-small);
+      font-size: var(--font-size-xsmall);
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.1s ease;
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-xxsmall);
+    }
+
+    .refresh-button:hover:not(:disabled) {
+      background: var(--figma-color-bg-hover);
+      border-color: var(--figma-color-border-strong);
+    }
+
+    .refresh-button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .refresh-button svg {
+      width: 14px;
+      height: 14px;
     }
 
     .toggle-group {
@@ -368,7 +401,18 @@
       align-items: center;
       gap: var(--spacing-xsmall);
       color: var(--figma-color-text-warning);
+      font-style: italic;
       font-size: var(--font-size-xsmall);
+      transition: all 0.2s ease;
+    }
+
+    .warning-message.warnings-resolved {
+      color: var(--figma-color-text-secondary);
+      font-style: normal;
+    }
+    
+    .warning-text {
+      transition: all 0.2s ease;
     }
 
     .warning-icon {
@@ -376,6 +420,11 @@
       height: 14px;
       flex-shrink: 0;
       color: var(--figma-color-icon-warning);
+      transition: color 0.2s ease;
+    }
+
+    .warning-icon.fuzzy-match {
+      color: var(--figma-color-icon-secondary);
     }
 
     .resolve-switch {
@@ -543,12 +592,14 @@
               `).join('')}
               ${component.warnings.map(warning => `
                 <div class="warning-toggle">
-                  <div class="warning-message">
-                    <svg class="warning-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <div class="warning-message" data-component="${component.name}" data-tag="${warning.tag}">
+                    <svg class="warning-icon ${warning.type === 'fuzzy-match' ? 'fuzzy-match' : ''}" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                       <path d="M12 2L2 22h20L12 2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                       <path d="M12 9v4m0 4h.01" stroke-width="2" stroke-linecap="round"/>
                     </svg>
-                    Hidden Layer: ${warning.tag}
+                    <span class="warning-text" data-original-text="${warning.type === 'fuzzy-match' ? warning.message : `Hidden Layer: ${warning.tag}`}">
+                      ${warning.type === 'fuzzy-match' ? warning.message : `Hidden Layer: ${warning.tag}`}
+                    </span>
                   </div>
                   <label class="resolve-switch">
                     <input 
@@ -578,6 +629,27 @@
           const undo = !e.target.checked;
           
           console.log('Toggle changed:', { componentName, tag, undo });
+          
+          // Update warning message style immediately
+          const warningMessage = document.querySelector(
+            `.warning-message[data-component="${componentName}"][data-tag="${tag}"]`
+          );
+          
+          if (warningMessage) {
+            if (e.target.checked) {
+              warningMessage.classList.add('warnings-resolved');
+              const textSpan = warningMessage.querySelector('.warning-text');
+              if (textSpan) {
+                textSpan.textContent = `Revealed Layer: ${tag}`;
+              }
+            } else {
+              warningMessage.classList.remove('warnings-resolved');
+              const textSpan = warningMessage.querySelector('.warning-text');
+              if (textSpan) {
+                textSpan.textContent = textSpan.dataset.originalText;
+              }
+            }
+          }
           
           parent.postMessage({
             pluginMessage: {
@@ -781,18 +853,36 @@
     function handleResolveAll(e) {
       console.log('Resolve all toggle changed:', e.target.checked);
       
-      if (e.target.checked) {
-        parent.postMessage({
-          pluginMessage: {
-            type: 'resolve-all-warnings'
-          }
-        }, '*');
-      }
+      parent.postMessage({
+        pluginMessage: {
+          type: 'resolve-all-warnings',
+          resolve: e.target.checked
+        }
+      }, '*');
     }
 
     window.onload = () => {
       console.log('Window loaded');
       updateTheme();
+      
+      const refreshButton = document.getElementById('refreshButton');
+      if (refreshButton) {
+        refreshButton.addEventListener('click', () => {
+          if (isProcessing) return;
+          
+          console.log('Refresh button clicked');
+          isProcessing = true;
+          refreshButton.disabled = true;
+          showStatus('Refreshing warnings...', 'info');
+          
+          parent.postMessage({
+            pluginMessage: {
+              type: 'analyze-content',
+              content: fileContent
+            }
+          }, '*');
+        });
+      }
 
       const uploadArea = document.getElementById('uploadArea');
       const fileInput = document.getElementById('fileInput');
@@ -894,6 +984,12 @@
         if (message.type === 'analysis-complete') {
           console.log('Analysis complete:', message.components);
           updateComponentList(message.components);
+          isProcessing = false;
+          const refreshButton = document.getElementById('refreshButton');
+          if (refreshButton) {
+            refreshButton.disabled = false;
+          }
+          updateButton();
           showStatus('Analysis complete', 'success');
         } else if (message.type === 'process-complete') {
           showStatus('Content processed successfully!', 'success');
@@ -913,11 +1009,35 @@
         } else if (message.type === 'all-warnings-resolved') {
           console.log('All warnings resolved:', message);
           
-          // Hide all warning toggles
-          const warningToggles = document.querySelectorAll('.warning-toggle');
-          warningToggles.forEach(toggle => {
-            toggle.style.display = 'none';
+          // Update all toggles and warning messages based on resolve state
+          const resolveAllToggle = document.getElementById('resolveAll');
+          if (resolveAllToggle) {
+            resolveAllToggle.checked = message.resolve;
+          }
+          
+          // Update all individual toggles and warning messages
+          document.querySelectorAll('.resolve-toggle').forEach(toggle => {
+            toggle.checked = message.resolve;
+            const componentName = toggle.dataset.component;
+            const tag = toggle.dataset.tag;
+            const warningMessage = document.querySelector(
+              `.warning-message[data-component="${componentName}"][data-tag="${tag}"]`
+            );
+            
+            if (warningMessage) {
+              warningMessage.classList.toggle('warnings-resolved', message.resolve);
+              const textSpan = warningMessage.querySelector('.warning-text');
+              if (textSpan) {
+                if (message.resolve) {
+                  textSpan.textContent = `Revealed Layer: ${tag}`;
+                } else {
+                  textSpan.textContent = textSpan.dataset.originalText;
+                }
+              }
+            }
           });
+          
+          console.log('Warning message styles updated');
 
           if (message.errors?.length > 0) {
             showStatus(`Some warnings could not be resolved: ${message.errors.join(', ')}`, 'error');
@@ -963,6 +1083,15 @@
 
   <div class="component-list-container">
     <div class="component-list-header">
+      <button id="refreshButton" class="refresh-button" title="Refresh warnings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path d="M3.5 12a8.5 8.5 0 1 1 1.8 5.2M3 7v5h5" 
+            stroke-width="2" 
+            stroke-linecap="round" 
+            stroke-linejoin="round"/>
+        </svg>
+        <span>Refresh</span>
+      </button>
       <div class="header-controls">
         <div class="toggle-group">
           <label class="switch">
