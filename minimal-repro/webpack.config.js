@@ -1,16 +1,12 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 
-module.exports = (env, argv) => ({
-  mode: argv.mode === 'production' ? 'production' : 'development',
-  target: 'web',
-  devtool: argv.mode === 'production' ? false : 'inline-source-map',
-
+module.exports = {
+  mode: 'development',
   entry: {
     code: './src/code.ts',
-    ui: './ui/src/main.tsx'
+    ui: './src/ui.html'
   },
-
   module: {
     rules: [
       {
@@ -20,31 +16,23 @@ module.exports = (env, argv) => ({
       },
       {
         test: /\.html$/,
-        loader: 'html-loader',
-      },
-      {
-        test: /\.css$/,
-        use: ['style-loader', 'css-loader']
+        loader: 'html-loader'
       }
     ]
   },
-
   resolve: {
-    extensions: ['.tsx', '.ts', '.jsx', '.js', '.css'],
-    modules: [path.resolve(__dirname, 'node_modules')]
+    extensions: ['.ts', '.js']
   },
-
   output: {
     filename: '[name].js',
     path: path.resolve(__dirname, 'dist')
   },
-
   plugins: [
     new HtmlWebpackPlugin({
-      template: './ui/index.html',
+      template: './src/ui.html',
       filename: 'ui.html',
       chunks: ['ui'],
       inject: 'body'
     })
   ]
-});
+}

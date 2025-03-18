@@ -8,18 +8,18 @@ export default defineConfig({
     sourcemap: true,
     outDir: 'dist',
     lib: {
-      entry: resolve(__dirname, 'ui/src/main.tsx'),
+      entry: resolve(__dirname, 'src/ui.tsx'), // Corrected entry point
       name: 'ui',
       fileName: 'bundle',
-      formats: ['iife']
+      formats: ['iife'],
     },
     rollupOptions: {
       output: {
         entryFileNames: 'bundle.js',
         extend: true,
         dir: 'dist',
-        sourcemap: true
-      }
-    }
-  }
+        // Removed sourcemap here, as it's already set in build.sourcemap
+      },
+    },
+  },
 });

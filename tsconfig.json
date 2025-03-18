@@ -1,17 +1,19 @@
 {
   "compilerOptions": {
     "target": "es6",
-    "lib": ["es6", "dom", "dom.iterable", "esnext"],
+    "lib": ["es6", "dom", "dom.iterable", "esnext", "es2015.proxy", "es2015.reflect"],
     "typeRoots": ["./node_modules/@types", "./node_modules/@figma"],
     "moduleResolution": "node",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "jsx": "react-jsx",
-    "module": "esnext",
+    "module": "commonjs",
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "noEmit": true
+    "types": ["@figma/plugin-typings", "node"],
+    "noImplicitAny": true,
+    "useDefineForClassFields": true
   },
-  "include": ["ui/src"]
+  "include": ["src", "ui/src"]
 }
