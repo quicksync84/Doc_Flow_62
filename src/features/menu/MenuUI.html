@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Doc Flow</title>
+  <link href="https://rsms.me/inter/inter.css" rel="stylesheet" crossorigin="anonymous">
+  <style>
+    :root {
+      --font-stack: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-size-xsmall: 11px;
+      --font-size-small: 12px;
+      --font-size-large: 14px;
+      --spacing-xxsmall: 4px;
+      --spacing-xsmall: 8px;
+      --spacing-small: 12px;
+      --spacing-med: 16px;
+      --spacing-large: 20px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-stack);
+      font-size: var(--font-size-small);
+      color: var(--figma-color-text);
+      background-color: var(--figma-color-bg);
+      margin: 0;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .plugin-header {
+      padding: var(--spacing-med);
+      border-bottom: 1px solid var(--figma-color-border);
+      background: var(--figma-color-bg);
+    }
+
+    .header-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--spacing-small);
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-small);
+    }
+
+    .header-title {
+      font-size: var(--font-size-large);
+      font-weight: 600;
+      color: var(--figma-color-text);
+      margin: 0;
+    }
+
+    .header-close {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      border: none;
+      background: transparent;
+      border-radius: 2px;
+      color: var(--figma-color-text);
+      cursor: pointer;
+      transition: all 0.1s ease;
+    }
+
+    .header-close:hover {
+      background: var(--figma-color-bg-hover);
+    }
+
+    .content {
+      padding: var(--spacing-med);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .menu-item {
+      padding: var(--spacing-med);
+      border-bottom: 1px solid var(--figma-color-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      transition: background-color 0.1s ease;
+    }
+
+    .menu-item:hover {
+      background-color: var(--figma-color-bg-hover);
+    }
+
+    .menu-item:last-child {
+      border-bottom: none;
+    }
+
+    .item-content {
+      flex: 1;
+    }
+
+    .item-title {
+      font-weight: 500;
+      margin-bottom: var(--spacing-xxsmall);
+      color: var(--figma-color-text);
+    }
+
+    .item-description {
+      font-size: var(--font-size-xsmall);
+      color: var(--figma-color-text-secondary);
+    }
+
+    .item-action {
+      padding: var(--spacing-xsmall) var(--spacing-small);
+      background: var(--figma-color-bg-secondary);
+      border: 1px solid var(--figma-color-border);
+      border-radius: 6px;
+      font-size: var(--font-size-xsmall);
+      color: var(--figma-color-text);
+      cursor: pointer;
+      transition: all 0.1s ease;
+    }
+
+    .item-action:hover {
+      background: var(--figma-color-bg-tertiary);
+      border-color: var(--figma-color-border-strong);
+    }
+
+    .footer {
+      margin-top: auto;
+      padding-top: var(--spacing-med);
+      border-top: 1px solid var(--figma-color-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: var(--font-size-xsmall);
+      color: var(--figma-color-text-secondary);
+    }
+
+    #debug-console {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      max-height: 200px;
+      background: var(--figma-color-bg);
+      border-top: 1px solid var(--figma-color-border);
+      font-family: monospace;
+      font-size: 11px;
+      overflow-y: auto;
+      display: none;
+    }
+
+    #debug-console.visible {
+      display: block;
+    }
+
+    .debug-entry {
+      padding: 4px 8px;
+      border-bottom: 1px solid var(--figma-color-border);
+    }
+
+    .debug-entry.error {
+      color: var(--figma-color-text-danger);
+      background: var(--figma-color-bg-danger);
+    }
+
+    .debug-entry .timestamp {
+      color: var(--figma-color-text-secondary);
+      margin-right: 8px;
+    }
+
+    .default-view {
+      display: none;
+    }
+
+    .content {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      padding: var(--spacing-med);
+    }
+  </style>
+</head>
+<body>
+  <div class="plugin-header">
+    <div class="header-content">
+      <div class="header-left">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M10.0625 1.75V3.9375H12.25" stroke="currentColor" stroke-linejoin="round"/>
+          <path d="M1.8125 1.75C1.8125 1.47386 1.58864 1.25 1.3125 1.25C1.03636 1.25 0.8125 1.47386 0.8125 1.75H1.8125ZM1.3125 10.5H0.8125C0.8125 10.7761 1.03636 11 1.3125 11V10.5ZM0.8125 1.75V10.5H1.8125V1.75H0.8125ZM1.3125 11H7.875V10H1.3125V11Z" fill="currentColor"/>
+          <path d="M5.6875 8.3125L7.875 10.5L5.6875 12.6875" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M9.5 12.5H12.5V3.5L10.5 1.5H5.5V6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <h1 class="header-title">Doc Flow</h1>
+      </div>
+      <button class="header-close" aria-label="Close plugin">
+        <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+          <path d="M1 1L7 7M7 1L1 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="default-view" id="defaultView">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke-width="2"/>
+      <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <p>Select an option from the menu to get started</p>
+  </div>
+
+  <div class="content" id="menuContent">
+    <div class="menu-item" data-feature="setflow">
+      <div class="item-content">
+        <div class="item-title">SetFlow</div>
+        <div class="item-description">Reorganize layers panel, rename, set parent & child tag system</div>
+      </div>
+      <button class="item-action">SetFlow</button>
+    </div>
+
+    <div class="menu-item" data-feature="upflow">
+      <div class="item-content">
+        <div class="item-title">UpFlow</div>
+        <div class="item-description">Upload doc and flow copy into your design</div>
+      </div>
+      <button class="item-action">Upload Doc</button>
+    </div>
+
+    <div class="menu-item" data-feature="reflow">
+      <div class="item-content">
+        <div class="item-title">ReFlow</div>
+        <div class="item-description">Upload new version of a previously uploaded doc</div>
+      </div>
+      <button class="item-action">Upload New Version</button>
+    </div>
+
+    <div class="menu-item" data-feature="exflow">
+      <div class="item-content">
+        <div class="item-title">ExFlow</div>
+        <div class="item-description">Select frames to create a copy doc from your figma design</div>
+      </div>
+      <button class="item-action">Nothing Selected</button>
+    </div>
+
+    <div class="menu-item" data-feature="findreplace">
+      <div class="item-content">
+        <div class="item-title">Find & Replace</div>
+        <div class="item-description">Find repeated text & make global changes in layer panel</div>
+      </div>
+      <button class="item-action">CTA</button>
+    </div>
+
+    <div class="footer">
+      <div class="usage-count"># free DocFlow uses left</div>
+      <button class="item-action">Upgrade Now</button>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('.menu-item').forEach(item => {
+        item.addEventListener('click', (event) => {
+          event.preventDefault();
+          const feature = item.dataset.feature;
+          if (feature) {
+            parent.postMessage({ 
+              pluginMessage: { 
+                type: 'navigate', 
+                feature 
+              } 
+            }, '*');
+          }
+        });
+      });
+
+      document.querySelector('.header-close').addEventListener('click', () => {
+        parent.postMessage({ 
+          pluginMessage: { 
+            type: 'close'
+          } 
+        }, '*');
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,25 +1,29 @@
 import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
 import { resolve } from 'path';
 
 export default defineConfig({
-  plugins: [react()],
   build: {
-    sourcemap: true,
+    target: 'es2015',
     outDir: 'dist',
+    emptyOutDir: true,
     lib: {
-      entry: resolve(__dirname, 'ui/src/main.tsx'),
-      name: 'ui',
-      fileName: 'bundle',
-      formats: ['iife']
+      entry: resolve(__dirname, 'src/code.ts'),
+      formats: ['iife'],
+      name: 'code'
     },
     rollupOptions: {
+      external: ['fast-levenshtein'],
       output: {
-        entryFileNames: 'bundle.js',
-        extend: true,
-        dir: 'dist',
-        sourcemap: true
+        globals: {
+          'fast-levenshtein': 'fastLevenshtein'
+        },
+        entryFileNames: 'code.js'
       }
+    }
+  },
+  resolve: {
+    alias: {
+      '@': resolve(__dirname, 'src')
     }
   }
 });

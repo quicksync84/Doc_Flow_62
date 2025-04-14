@@ -420,6 +420,11 @@
       height: 14px;
       flex-shrink: 0;
       color: var(--figma-color-icon-warning);
+      transition: color 0.2s ease;
+    }
+
+    .warning-icon.fuzzy-match {
+      color: var(--figma-color-icon-secondary);
     }
 
     .resolve-switch {
@@ -588,11 +593,13 @@
               ${component.warnings.map(warning => `
                 <div class="warning-toggle">
                   <div class="warning-message" data-component="${component.name}" data-tag="${warning.tag}">
-                    <svg class="warning-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <svg class="warning-icon ${warning.type === 'fuzzy-match' ? 'fuzzy-match' : ''}" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                       <path d="M12 2L2 22h20L12 2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                       <path d="M12 9v4m0 4h.01" stroke-width="2" stroke-linecap="round"/>
                     </svg>
-                    <span class="warning-text" data-original-text="Hidden Layer: ${warning.tag}">Hidden Layer: ${warning.tag}</span>
+                    <span class="warning-text" data-original-text="${warning.type === 'fuzzy-match' ? warning.message : `Hidden Layer: ${warning.tag}`}">
+                      ${warning.type === 'fuzzy-match' ? warning.message : `Hidden Layer: ${warning.tag}`}
+                    </span>
                   </div>
                   <label class="resolve-switch">
                     <input 

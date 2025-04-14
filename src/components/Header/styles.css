@@ -1,0 +1,49 @@
+.plugin-header {
+  padding: var(--spacing-med);
+  border-bottom: 1px solid var(--figma-color-border);
+  background: var(--figma-color-bg);
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-small);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-small);
+}
+
+.header-title {
+  font-size: var(--font-size-large);
+  font-weight: 600;
+  color: var(--figma-color-text);
+  margin: 0;
+}
+
+.header-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: 2px;
+  color: var(--figma-color-text);
+  cursor: pointer;
+  transition: all 0.1s ease;
+}
+
+.header-close:hover {
+  background: var(--figma-color-bg-hover);
+}
+
+.header-close svg {
+  width: 8px;
+  height: 8px;
+}
